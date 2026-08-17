@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+
+jobs:
+  ci:
+    # kart-devops houses the shared CI/CD workflows so the same pipeline
+    # (restore/build/test/lint/scan) isn't copy-pasted across all repos
+    # (PLATFORM_BLUEPRINT.md §2.4, kart-conventions.md "CI").
+    uses: kart-commerce/kart-devops/.github/workflows/dotnet-service-ci.yml@main
+    with:
+      solution-path: KartShippingService.sln
+      dotnet-version: "8.0.x"
+    secrets: inherit
+
+  migration-bundle:
+    name: Migration bundle (build + smoke check)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker build smoke check
+        run: docker build -f Dockerfile.migrate -t ci-migrate-smoke-check:${{ github.sha }} .

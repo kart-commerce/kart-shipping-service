@@ -1,0 +1,34 @@
+{
+  "service": "kart-shipping-service",
+  "exchanges": [
+    { "name": "shipping.exchange", "type": "topic", "durable": true },
+    { "name": "shipping.dlx", "type": "topic", "durable": true }
+  ],
+  "externalExchanges": [
+    { "name": "order.exchange", "type": "topic", "durable": true }
+  ],
+  "publishedEvents": [
+    { "eventType": "ShipmentDispatched", "exchange": "shipping.exchange", "routingKey": "shipping.shipment.dispatched" },
+    { "eventType": "ShipmentCreationFailed", "exchange": "shipping.exchange", "routingKey": "shipping.shipment.creation-failed" }
+  ],
+  "queues": [
+    {
+      "name": "shipping.order-events.queue",
+      "durable": true,
+      "bindings": [
+        { "exchange": "order.exchange", "routingKey": "order.order.confirmed" }
+      ],
+      "deadLetter": { "exchange": "shipping.dlx", "routingKey": "shipping.order-events.dlq" },
+      "retryLadder": {
+        "requeueTo": "shipping.order-events.queue",
+        "tiers": [
+          { "name": "shipping.order-events.retry.30s", "ttlMs": 30000 }
+        ]
+      }
+    }
+  ],
+  "deadLetterQueues": [
+    { "name": "shipping.order-events.dlq", "exchange": "shipping.dlx", "routingKey": "shipping.order-events.dlq" }
+  ],
+  "_comment": "Source of truth for this service's entire RabbitMQ topology (event-contract.md). This adapts kart-platform/docs/services/kart-shipping-service/message-bus-manifest.json's draft (which used an older { exchange, dlx, retry, dlqs } shape) to the schema Kart.Shared.Messaging's MessageBusManifest actually parses ({ exchanges[], externalExchanges[], publishedEvents[], queues[], deadLetterQueues[] }) - same correction kart-payment-service's own manifest already documents making. ShipmentDispatched/ShipmentCreationFailed are published via this service's own EF Core/PostgreSQL transactional outbox (OutboxRelayHostedService), which retries indefinitely until RabbitMQ is reachable rather than dead-lettering - per event-standards.md's 'never a shared/global DLQ' rule, each consumer (Order, Delivery Tracking, Analytics, Notification) declares its own per-event DLQ in its own manifest, not here. The CQRS read-model sync (MongoDB) is NOT a self-consumed queue like kart-payment-service's - it is an in-process poller reading shipment_outbox directly (see contracts/README.md), because the internal CarrierCallRequested marker (needed so Pending shipments are visible in the read model) is never published to RabbitMQ at all."
+}

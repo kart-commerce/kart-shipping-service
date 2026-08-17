@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy to globalconfig.json (gitignored) for standalone `docker compose up`. Every real secret (ConnectionStrings/RabbitMq credentials) is already supplied directly as plain environment variables in docker-compose.yml for local dev, so this file only needs to satisfy AddKartGlobalConfig's fail-fast Path requirement - a real deployed environment points GlobalConfig__Path at the actual shared kart-internals/globalconfig.json instead, which layers real secrets under Services.kart-shipping-service.",
+  "Global": {},
+  "Services": {
+    "kart-shipping-service": {}
+  }
+}

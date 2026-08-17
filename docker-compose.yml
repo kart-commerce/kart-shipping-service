@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: kart_shipping_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432" # host 5432/5433 may already be bound by other local services
+    volumes:
+      - shipping-postgres-data:/var/lib/postgresql/data
+
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "27019:27017" # host 27017/27018 may already be bound by other local services
+    volumes:
+      - shipping-mongo-data:/data/db
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      # RabbitMQ's default "guest" user is restricted to loopback-only connections - a container
+      # reaching it over the compose bridge network does not count as loopback, so a dedicated
+      # non-guest user is required (same fix applied in tests/IntegrationTests/ShippingApiFactory.cs).
+      RABBITMQ_DEFAULT_USER: "shipping"
+      RABBITMQ_DEFAULT_PASS: "shipping"
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+
+  shipping-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      # ${SHIPPING_PORT} matches kart-devops/ports.env's canonical value for this service --
+      # `source ../kart-devops/ports.env` first to pick it up automatically; the :-8095 fallback
+      # is only for running this repo fully standalone, with no kart-devops checkout alongside it.
+      - "${SHIPPING_PORT:-8095}:8080"
+    volumes:
+      # AddKartGlobalConfig fails fast unless GlobalConfig:Path names a real file - copy
+      # globalconfig.example.json to globalconfig.json (gitignored) to run this stack standalone.
+      # Every actual secret below is supplied directly as a plain env var instead; a real deployed
+      # environment points this at the shared kart-internals/globalconfig.json instead.
+      - ./globalconfig.json:/app/globalconfig.json:ro
+    environment:
+      GlobalConfig__Path: "/app/globalconfig.json"
+      ConnectionStrings__ShippingDatabase: "Host=postgres;Port=5432;Database=kart_shipping_dev;Username=postgres;Password=postgres"
+      Mongo__ConnectionString: "mongodb://mongo:27017"
+      Mongo__Database: "kart_shipping_read_dev"
+      RabbitMq__HostName: "rabbitmq"
+      RabbitMq__UserName: "shipping"
+      RabbitMq__Password: "shipping"
+      Identity__JwksUri: "http://identity-service:8080/.well-known/jwks.json"
+    depends_on:
+      - postgres
+      - mongo
+      - rabbitmq
+
+volumes:
+  shipping-postgres-data:
+  shipping-mongo-data:

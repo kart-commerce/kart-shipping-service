@@ -1,0 +1,6 @@
+{
+  "_comment": "Copy this file to appsettings.Local.json (gitignored) and set GlobalConfig:Path to an absolute path on your machine, e.g. the shared kart-internals/globalconfig.json every service points at.",
+  "GlobalConfig": {
+    "Path": "/absolute/path/to/kart-internals/globalconfig.json"
+  }
+}

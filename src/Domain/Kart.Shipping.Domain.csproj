@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Pure domain project - no framework/package dependencies at all, matching kart-identity-service's Domain project. -->
+
+</Project>

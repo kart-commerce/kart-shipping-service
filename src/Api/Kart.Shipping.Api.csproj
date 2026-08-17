@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.21" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!--
+    kart-conventions.md Observability section: Kart.Shared.Observability wires Serilog + the
+    OpenTelemetry SDK behind one DI call - never reimplemented per service.
+    Kart.Shared.Configuration wires the GlobalConfig external-secrets-file bootstrap.
+    Kart.Shared.ErrorHandling wires the global exception handler + consistent Problem envelope.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Kart.Shared.Configuration" Version="0.2.0" />
+    <PackageReference Include="Kart.Shared.Observability" Version="0.3.0" />
+    <PackageReference Include="Kart.Shared.ErrorHandling" Version="0.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Application\Kart.Shipping.Application.csproj" />
+    <ProjectReference Include="..\Infrastructure\Kart.Shipping.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!--
+    contracts/message-bus-manifest.json is this service's single source of truth for its
+    RabbitMQ topology — copied here so RabbitMqOptions.ManifestPath (resolved against
+    AppContext.BaseDirectory) finds it at runtime without a "../../contracts" relative path
+    that would break once this service is deployed as its own container image.
+  -->
+  <ItemGroup>
+    <Content Include="..\..\contracts\message-bus-manifest.json" Link="message-bus-manifest.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
